@@ -1,0 +1,116 @@
+services:
+
+  namenode:
+    build: ./hadoop
+    container_name: namenode
+    hostname: namenode
+    environment:
+      - HADOOP_NODE=namenode
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    networks:
+      - cluster
+
+  datanode:
+    build: ./hadoop
+    container_name: datanode
+    environment:
+      - HADOOP_NODE=datanode
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    networks:
+      - cluster
+
+  spark-master:
+    build: ./spark
+    container_name: spark-master
+    environment:
+      - SPARK_ROLE=master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    depends_on:
+      - namenode
+    networks:
+      - cluster
+
+  spark-worker-1:
+    build: ./spark
+    container_name: spark-worker-1
+    environment:
+      - SPARK_ROLE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=8G
+      - SPARK_WORKER_PORT=7078
+      - SPARK_WORKER_WEBUI_PORT=8081
+    cpuset: "0"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    depends_on:
+      - spark-master
+    networks:
+      - cluster
+
+  # spark-worker-2:
+  #   build: ./spark
+  #   container_name: spark-worker-2
+  #   environment:
+  #     - SPARK_ROLE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_CORES=1
+  #     - SPARK_WORKER_MEMORY=8G
+  #     - SPARK_WORKER_PORT=7079
+  #     - SPARK_WORKER_WEBUI_PORT=8082
+  #   cpuset: "1"
+  #   volumes:
+  #     - ./notebooks:/home/jovyan/work
+  #   depends_on:
+  #     - spark-master
+  #   networks:
+  #     - cluster
+
+  # spark-worker-3:
+  #   build: ./spark
+  #   container_name: spark-worker-3
+  #   environment:
+  #     - SPARK_ROLE=worker
+  #     - SPARK_MASTER_URL=spark://spark-master:7077
+  #     - SPARK_WORKER_CORES=1
+  #     - SPARK_WORKER_MEMORY=8G
+  #     - SPARK_WORKER_PORT=7080
+  #     - SPARK_WORKER_WEBUI_PORT=8083
+  #   cpuset: "1"
+  #   volumes:
+  #     - ./notebooks:/home/jovyan/work
+  #   depends_on:
+  #     - spark-master
+  #   networks:
+  #     - cluster
+
+  jupyter:
+    build: ./jupyter
+    container_name: jupyter
+    user: "1000:100"
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
+      - SPARK_HOME=/opt/spark
+      - PASSWORD=${JUPYTER_PASSWORD}
+      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+    depends_on:
+      - spark-master
+    networks:
+      - cluster
+
+networks:
+  cluster:

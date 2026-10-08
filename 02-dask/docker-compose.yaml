@@ -1,0 +1,71 @@
+services:
+  dask-scheduler:
+    image: daskdev/dask:latest
+    container_name: dask-scheduler
+    ports:
+      - "8786:8786"     # scheduler port (workers and clients)
+      - "8787:8787"     # web dashboard
+    command: dask-scheduler
+    networks:
+      - dask-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'         # Very low: the scheduler only coordinates
+          memory: 1g
+    cpuset: "1"              # Pin the scheduler to CPU 1
+
+  dask-worker-1:
+    image: daskdev/dask:latest
+    depends_on:
+      - dask-scheduler
+    environment:
+      - EXTRA_APT_PACKAGES=vim
+    command: dask-worker tcp://dask-scheduler:8786 --nthreads 1 --memory-limit 2GB
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2g
+    cpuset: "0"              # Pin worker 1 to CPU 0
+    container_name: dask-worker-1
+    networks:
+      - dask-net
+
+  dask-worker-2:
+    image: daskdev/dask:latest
+    depends_on:
+      - dask-scheduler
+    environment:
+      - EXTRA_APT_PACKAGES=vim
+    command: dask-worker tcp://dask-scheduler:8786 --nthreads 1 --memory-limit 2GB
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2g
+    cpuset: "1"
+    container_name: dask-worker-2
+    networks:
+      - dask-net
+
+  dask-worker-3:
+    image: daskdev/dask:latest
+    depends_on:
+      - dask-scheduler
+    environment:
+      - EXTRA_APT_PACKAGES=vim
+    command: dask-worker tcp://dask-scheduler:8786 --nthreads 1 --memory-limit 2GB
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2g
+    cpuset: "0"
+    container_name: dask-worker-3
+    networks:
+      - dask-net
+
+networks:
+  dask-net:
+    driver: bridge

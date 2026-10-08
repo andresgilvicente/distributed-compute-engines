@@ -1,0 +1,98 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "EMR cluster on m8g.xlarge instances with a configurable number of core nodes; VPC and subnet are parameters."
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC for the EMR cluster"
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Subnet for the EMR instances"
+
+  InstanceCount:
+    Type: Number
+    Default: 3
+    Description: "Number of core instances in the cluster (maximum 3)"
+    MinValue: 1
+    MaxValue: 3
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "Name of the key pair used to access the EC2 instances"
+  
+Resources:
+
+  EMRCluster:
+    Type: AWS::EMR::Cluster
+    Properties:
+      Name: "EMR-m8g-Cluster"
+      ReleaseLabel: "emr-6.15.0"
+      Applications:
+        - Name: Hadoop
+        - Name: Spark
+      VisibleToAllUsers: true
+      JobFlowRole: !Ref EMREC2InstanceProfile
+      ServiceRole: !Ref EMRServiceRole
+
+      Instances:
+        Ec2SubnetId: !Ref SubnetId
+        Ec2KeyName: !Ref KeyName
+        KeepJobFlowAliveWhenNoSteps: true
+
+        MasterInstanceGroup:
+          InstanceCount: 1
+          InstanceType: m8g.xlarge
+          Name: Master
+
+        CoreInstanceGroup:
+          InstanceCount: !Ref InstanceCount
+          InstanceType: m8g.xlarge
+          Name: Core
+
+      LogUri: "s3://your-emr-logs-bucket/"
+
+  EMRServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: elasticmapreduce.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole
+
+  EMREC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref EMREC2InstanceRole
+
+  EMREC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role
+
+Outputs:
+  ClusterId:
+    Description: "EMR cluster ID"
+    Value: !Ref EMRCluster
+
+  UsedVpc:
+    Description: "VPC in use"
+    Value: !Ref VpcId
+
+  UsedSubnet:
+    Description: "Subnet in use"
+    Value: !Ref SubnetId
