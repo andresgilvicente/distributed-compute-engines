@@ -14,6 +14,8 @@
 
 # Distributed Compute Engines
 
+**Development period:** September-December 2025
+
 A hands-on benchmark of three distributed computing engines (**Ray**, **Dask** and **Apache Spark**) across four deployments on **AWS**. Each engine runs the same Monte Carlo workload in Docker clusters on an Amazon EC2 instance, and Spark also runs on a managed **Amazon EMR** cluster.
 
 The project was developed for the **Big Data Architectures course at Universidad Pontificia Comillas (ICAI)** and was built incrementally over four sprints, each adding a new engine or deployment target.
